@@ -1,0 +1,40 @@
+<query-editor-row query-ctrl="ctrl" class="generic-datasource-query-row" has-text-edit-mode="true">
+  <div class="gf-form-inline">
+
+    <div class="gf-form max-width-8" ng-if="ctrl.target.rawQuery">
+      <textarea class="gf-form-input" rows="5" ng-model="ctrl.target.target" spellcheck="false" ng-blur="ctrl.onChangeInternal()" />
+    </div>
+
+    <div ng-if="!ctrl.target.rawQuery">
+      <div class="gf-form">
+        <gf-form-dropdown model="ctrl.target.target"
+          allow-custom="true"
+          lookup-text="true"
+          get-options="ctrl.getOptions($query)"
+          on-change="ctrl.onChangeInternal()">
+        </gf-form-dropdown>
+      </div>
+    </div>
+    <div class="gf-form gf-form--grow">
+      <div class="gf-form-label gf-form-label--grow"></div>
+    </div>
+  </div>
+  <div class="gf-form-inline">
+    <label class="gf-form-label">Select index</label>
+    <input type="text" class="gf-form-input" ng-model="ctrl.target.index" spellcheck="false" placeholder="Immetere indice" ng-blur="ctrl.onChangeInternal()" />
+  </div>
+  <div class='gf-form-inline'>
+    <div class="gf-form gf-form--grow">
+      <label class="gf-form-label">Select x</label>
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.x" spellcheck="false" placeholder="Immettere y" ng-blur="ctrl.onChangeInternal()" />
+    </div>
+    <div class="gf-form gf-form--grow">
+       <label class="gf-form-label">Select y</label>
+       <input type="text" class="gf-form-input" ng-model="ctrl.target.y" spellcheck="false" placeholder="Immettere x" ng-blur="ctrl.onChangeInternal()" />
+    </div>
+    <div class="gf-form gf-form--grow">
+       <label class="gf-form-label">Select path</label>
+       <input type="text" class="gf-form-input" ng-model="ctrl.target.path" spellcheck="false" placeholder="Immettere path" ng-blur="ctrl.onChangeInternal()" />
+    </div>
+  </div>
+</query-editor-row>
