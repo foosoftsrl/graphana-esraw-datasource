@@ -19,22 +19,37 @@
       <div class="gf-form-label gf-form-label--grow"></div>
     </div>
   </div>
+
+  <!-- Index -->
   <div class="gf-form-inline">
-    <label class="gf-form-label">Select index</label>
-    <input type="text" class="gf-form-input" ng-model="ctrl.target.index" spellcheck="false" placeholder="Immetere indice" ng-blur="ctrl.onChangeInternal()" />
+    <div class="gf-form gf-form--grow">
+      <label class="gf-form-label query-keyword width-7">ES index</label>
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.index" spellcheck="false" placeholder="Immetere indice" ng-blur="ctrl.onChangeInternal()" />
+    </div>
   </div>
-  <div class='gf-form-inline'>
+  
+  <div class="gf-form-inline">
     <div class="gf-form gf-form--grow">
-      <label class="gf-form-label">Select x</label>
-      <input type="text" class="gf-form-input" ng-model="ctrl.target.x" spellcheck="false" placeholder="Immettere y" ng-blur="ctrl.onChangeInternal()" />
+       <label class="gf-form-label query-keyword width-7">Data path</label>
+       <input type="text" class="gf-form-input" ng-model="ctrl.target.path" spellcheck="false" placeholder="Path to array of key/value pairs" ng-blur="ctrl.onChangeInternal()" />
     </div>
+  </div>
+  <div class="gf-form-inline">
     <div class="gf-form gf-form--grow">
-       <label class="gf-form-label">Select y</label>
-       <input type="text" class="gf-form-input" ng-model="ctrl.target.y" spellcheck="false" placeholder="Immettere x" ng-blur="ctrl.onChangeInternal()" />
+      <label class="gf-form-label query-keyword width-7">Time field</label>
+      <input type="text" class="gf-form-input" ng-model="ctrl.target.x" spellcheck="false" placeholder="Name of the field containing timestamps" ng-blur="ctrl.onChangeInternal()" />
     </div>
+  </div>
+  <div class="gf-form-inline">
     <div class="gf-form gf-form--grow">
-       <label class="gf-form-label">Select path</label>
-       <input type="text" class="gf-form-input" ng-model="ctrl.target.path" spellcheck="false" placeholder="Immettere path" ng-blur="ctrl.onChangeInternal()" />
+       <label class="gf-form-label query-keyword width-7">Value field</label>
+       <input type="text" class="gf-form-input" ng-model="ctrl.target.y" spellcheck="false" placeholder="Name of the field containing value coord" ng-blur="ctrl.onChangeInternal()" />
+    </div>
+  </div>
+  <div class="gf-form-inline">
+    <div class="gf-form gf-form--grow">
+      <label class="gf-form-label query-keyword width-7">Body</label>
+      <textarea class="gf-form-input" rows="10" ng-model="ctrl.target.body" spellcheck="false" ng-blur="ctrl.onChangeInternal()" />
     </div>
   </div>
 </query-editor-row>

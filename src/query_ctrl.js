@@ -1,5 +1,6 @@
 import {QueryCtrl} from 'app/plugins/sdk';
 import './css/query-editor.css!'
+import * as acc from './ace.js';
 
 export class GenericDatasourceQueryCtrl extends QueryCtrl {
 
@@ -12,6 +13,7 @@ export class GenericDatasourceQueryCtrl extends QueryCtrl {
     this.target.y = this.target.y || 'key';
     this.target.path = this.target.path || 'aggregations.range.value'
     this.target.index = this.target.index || 'radio'
+    this.target.body = this.target.body || ''
     //this.target.type = this.target.type || 'timeserie';
   }
 

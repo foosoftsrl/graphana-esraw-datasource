@@ -1,3 +1,4 @@
+import * as hjson from './hjson.js';
 import _ from "lodash";
 
 export class GenericDatasource {
@@ -17,16 +18,12 @@ export class GenericDatasource {
   }
 
   query(options) {
-    console.log('Querying with options', options)
-    console.log('Targets', options.targets)
-    console.log('X', options.targets[0].x);
-    console.log('Y', options.targets[0].y);
-    console.log('Path', options.targets[0].path);
-    console.log('Index', options.targets[0].index)
-    const xKey = options.targets[0].x
-    const yKey = options.targets[0].y
+    console.log('Querying with options: ', options)
+    
     const path = options.targets[0].path
     const index = options.targets[0].index
+    const body = options.targets[0].body
+
     var query = options// = this.buildQueryParameters(options);
     query.targets = query.targets.filter(t => !t.hide);
     if (query.targets.length <= 0) {
@@ -41,81 +38,19 @@ export class GenericDatasource {
     
     // Make sure that the range is defined  
     if (options && options.range && options.range.from && options.range.to) {
-      // Get full body
-      //const body = options.targets[3].target
-      const gte = new Date(options.range.from._d).toISOString();
-      const lt = new Date(options.range.to._d).toISOString();
-      //body.replace('{gte}', gte)
-      //body.replace('{lt}', lt)
-      const mapScript =  [
-        'if(doc["@timestamp"].size() != 1 || doc["requestTime"].size() != 1)',
-        'return;',
-        'long durationSecs = doc["requestTime"].value;',
-        'long docEnd = doc["@timestamp"].value.toInstant().toEpochMilli();',
-        'long docStart = docEnd - durationSecs * 1000l;',
-        'long bucketSize = 1000 * 60 * 60 * 1l;', // one hour
-        'long bucketStart = Math.round(docStart / bucketSize) * bucketSize;',
-        'long bucketEnd = bucketStart + bucketSize;',
-        'long numSteps = durationSecs * 1000l / bucketSize;',
-        'while(bucketStart < docEnd) {',
-        'def overlap = Math.min(bucketEnd, docEnd) - Math.max(bucketStart,docStart);',
-        'if(overlap > 0) {', 
-        'def overlapFraction = ((double)overlap) / bucketSize;',
-        'String key = Long.toString(bucketStart);',
-        'if (state.map.containsKey(key))',
-        'state.map[key] += overlapFraction;',
-        'else',
-        'state.map[key] = overlapFraction;',
-        '}',
-        'bucketStart = bucketEnd;',
-        'bucketEnd += bucketSize;',
-        '}'
-      ]
-      const reduceScript = [
-        'def reduceMap = [:];',
-        'for (map in states) {',
-        'for (entry in map.entrySet()) {',
-        'def keyAsStr = Instant.ofEpochMilli(Long.parseLong(entry.getKey())).toString();',
-        'if (!reduceMap.containsKey(keyAsStr))  {',
-        'reduceMap[keyAsStr] = [:];',
-        'reduceMap[keyAsStr].key = Long.parseLong(entry.getKey());',
-        'reduceMap[keyAsStr].key_as_string = keyAsStr;',
-        'reduceMap[keyAsStr].count = entry.getValue();',
-        '} else {',
-        'reduceMap[keyAsStr].count += entry.getValue();',
-        '}',
-        '}',
-        '}',
-        'def buckets = new ArrayList(reduceMap.values());',
-        'buckets.sort((a,b)->Long.compare(a.key, b.key));',
-        'return buckets;'
-      ]
+      // Interpolate body
+      var bodyHjson = this.templateSrv.replace(body, {}, 'glob');
+
+      // Parse hjson body to a javacript variable
+      const bodyObject = hjson.parse(bodyHjson);
+      
+//      const otherTrimmedBody = _.trim(body)
+//      console.log('Other trimmed body', otherTrimmedBody)
 
       // Make request to Elastic Search
       return this.doRequest({
-        // TODO: radio must be a parameter. Ideally should request to Elastich search the available id:bn
         url: `${this.url}/${index}/_search`,
-        data: 
-          {
-            query: {
-              range: {
-                "@timestamp": {
-                  gte,
-                  lt
-                }
-              }
-            },
-          aggs: {
-            range: {
-              scripted_metric: {
-                init_script: "state.map = [:]",
-                combine_script: "state.map",
-                map_script: mapScript.join('\n'),
-                reduce_script: reduceScript.join('\n') 
-              }
-            }
-          }
-        },
+        data: bodyObject,
         method: 'POST'
       }).then(res => {
         console.log('Got elastich search result')
@@ -136,7 +71,7 @@ export class GenericDatasource {
         console.log('x key', xKey);
         console.log('y key', yKey);
         // Map the data points to a timeserie
-        const dataPoints = value.map(v => [v[xKey], v[yKey]])
+        const dataPoints = value.map(v => [v[yKey], v[xKey]])
         return {data:[
             {
               datapoints:dataPoints
