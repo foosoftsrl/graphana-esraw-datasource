@@ -1,5 +1,3 @@
-//import defaults from 'lodash/defaults';
-
 import _ from 'lodash';
 
 import { DataQueryRequest, DataQueryResponse, DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
@@ -51,42 +49,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data: reqContent,
       method: 'POST',
     }).then((res: any) => {
-      const resultArray = [];
-      for (let i = 0; i < targets.length; i++) {
-        const target = targets[i];
-        const targetResponse = res.data.responses[i];
-        const path = target.path;
-        if (!path) {
-          throw new Error('No path option');
-        }
-        console.log('Path', path);
-        const value = _.get(targetResponse, path);
-        if (!value) {
-          throw new Error('No data @path ' + path);
-        }
-        if (!Array.isArray(value)) {
-          throw new Error('Not an array @' + path);
-        }
-        // Get x/y keys
-        const xKey = target.x;
-        const yKey = target.y;
-        // Map the data points to a timeserie
-        if (value.length) {
-          if (!(xKey in value[0])) {
-            throw new Error("Can't find '" + xKey + "' property in response");
-          }
-          if (!(yKey in value[0])) {
-            throw new Error("Can't find '" + yKey + "' property in response");
-          }
-        }
-        const dataPoints = value.map(v => [v[yKey], v[xKey]]);
-        const targetData = {
-          target: 'pippo',
-          datapoints: dataPoints,
-        };
-        resultArray.push(targetData);
-      }
-      return { data: resultArray };
+      return this.mapResponse(targets, res);
     });
   }
 
@@ -96,12 +59,53 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     return this.backendSrv.datasourceRequest(options);
   }
 
-  async testDatasource() {
-    // Implement a health check for your data source.
+  // Convert ES response to grafana DataSourceResponse
+  mapResponse(targets: any, res: any) {
+    const resultArray = [];
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const targetResponse = res.data.responses[i];
+      const path = target.path;
+      if (!path) {
+        throw new Error('No path option');
+      }
+      console.log('Path', path);
+      const value = _.get(targetResponse, path);
+      if (!value) {
+        throw new Error('No data @path ' + path);
+      }
+      if (!Array.isArray(value)) {
+        throw new Error('Not an array @' + path);
+      }
+      // Get x/y keys
+      const xKey = target.x;
+      const yKey = target.y;
+      // Map the data points to a timeserie
+      if (value.length) {
+        if (!(xKey in value[0])) {
+          throw new Error("Can't find '" + xKey + "' property in response");
+        }
+        if (!(yKey in value[0])) {
+          throw new Error("Can't find '" + yKey + "' property in response");
+        }
+      }
+      const dataPoints = value.map(v => [v[yKey], v[xKey]]);
+      const targetData = {
+        target: 'pippo',
+        datapoints: dataPoints,
+      };
+      resultArray.push(targetData);
+    }
+    return { data: resultArray };
+  }
 
-    return {
-      status: 'success',
-      message: 'Success',
-    };
+  testDatasource() {
+    return this.doRequest({ url: this.url + '/', method: 'GET' }).then((response: any) => {
+      if (response.status === 200) {
+        return { status: 'success', message: 'Data source is working', title: 'Success' };
+      } else {
+        throw new Error('Invalid response status ' + response.status);
+      }
+    });
   }
 }
