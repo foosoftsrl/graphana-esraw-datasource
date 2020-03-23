@@ -11,7 +11,7 @@
   "author": "Foosoft Srl",
   "license": "Apache-2.0",
   "dependencies" : {
-    "react-ace": "6.2.2"
+    "react-ace": "^7.0.0"
   },
 
   "devDependencies": {

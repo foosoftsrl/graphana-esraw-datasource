@@ -7,10 +7,10 @@ import { MyQuery, MyDataSourceOptions } from './types';
 import * as hjson from 'hjson';
 
 export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
-  name: any;
-  url: any;
-  basicAuth: any;
-  withCredentials: any;
+  name: string;
+  url?: string;
+  basicAuth?: string;
+  withCredentials?: boolean;
 
   constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>, private templateSrv: any, private backendSrv: any) {
     super(instanceSettings);
@@ -32,7 +32,8 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     if (targets.length <= 0) {
       return Promise.resolve({ data: [] });
     }
-
+    const adhocFilters = this.templateSrv.getAdhocFilters(this.name);
+    console.log('adhoc filters = ' + JSON.stringify(adhocFilters));
     let reqContent = '';
     targets.forEach(target => {
       reqContent += JSON.stringify({ index: target.index }) + '\n';
@@ -60,7 +61,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   // Convert ES response to grafana DataSourceResponse
-  mapResponse(targets: any, res: any) {
+  mapResponse(targets: MyQuery[], res: any) {
     const resultArray = [];
     for (let i = 0; i < targets.length; i++) {
       const target = targets[i];
@@ -91,7 +92,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       }
       const dataPoints = value.map(v => [v[yKey], v[xKey]]);
       const targetData = {
-        target: 'pippo',
+        target: target.alias ? target.alias : 'value',
         datapoints: dataPoints,
       };
       resultArray.push(targetData);
@@ -108,4 +109,13 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       }
     });
   }
+  getTagKeys() {
+    return Promise.resolve([]);
+  }
+
+  /*
+  getTagValues(options: any) {
+    return this.getTerms({ field: options.key, query: '*' });
+  }
+*/
 }
