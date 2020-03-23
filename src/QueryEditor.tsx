@@ -89,19 +89,6 @@ export class QueryEditor extends PureComponent<Props, State> {
             />
           </div>
         </div>
-        {/*
-        <div className="gf-form-inline">
-          <div className="gf-form gf-form--grow">
-            <label className="gf-form-label query-keyword width-7">Body</label>
-            <textarea
-              className="gf-form-input"
-              rows={10}
-              value={body}
-              onChange={(event: ChangeEvent<HTMLTextAreaElement>) => this.onChange({ ...query, body: event.target.value })}
-            />
-          </div>
-        </div>
-*/}
         <div className="gf-form-inline">
           <div className="gf-form gf-form--grow">
             <label className="gf-form-label query-keyword width-7">Body Ace</label>

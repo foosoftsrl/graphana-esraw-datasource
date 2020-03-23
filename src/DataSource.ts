@@ -23,17 +23,33 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    //const { range } = options;
-    //const from = range!.from.valueOf();
-    //const to = range!.to.valueOf();
+    // Select only enabled targets
     const targets = options.targets.filter(t => {
       return !t.hide;
     });
+
     if (targets.length <= 0) {
       return Promise.resolve({ data: [] });
     }
+
+    // Prepare a range filter on timestamp field
+    const { range } = options;
+    const from = range!.from.valueOf();
+    const to = range!.to.valueOf();
+    const rangeFilter = {
+      range: {
+        '@timestamp': {
+          gte: from,
+          lte: to,
+        },
+      },
+    };
+
+    // Ad hoc filters will be inserted as-is in the query
     const adhocFilters = this.templateSrv.getAdhocFilters(this.name);
     console.log('adhoc filters = ' + JSON.stringify(adhocFilters));
+
+    // Accumulate the targets into an ES msearch request body
     let reqContent = '';
     targets.forEach(target => {
       reqContent += JSON.stringify({ index: target.index }) + '\n';
@@ -41,6 +57,14 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       const bodyHjson = this.templateSrv.replace(target.body, {}, 'glob');
       // Parse hjson body to a javacript variable
       const bodyObject = hjson.parse(bodyHjson);
+
+      const filters = [rangeFilter];
+      bodyObject.query = {
+        bool: {
+          must: filters,
+        },
+      };
+
       // Concatenate body
       reqContent += JSON.stringify(bodyObject) + '\n';
     });
