@@ -59,6 +59,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       const bodyObject = hjson.parse(bodyHjson);
 
       const filters = [rangeFilter];
+      const oldQuery = bodyObject.query;
+      if (oldQuery) {
+        filters.push(oldQuery);
+      }
       bodyObject.query = {
         bool: {
           must: filters,
