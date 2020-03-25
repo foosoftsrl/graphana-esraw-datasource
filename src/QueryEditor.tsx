@@ -13,17 +13,22 @@ type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
 interface State {}
 
 export class QueryEditor extends PureComponent<Props, State> {
-  onComponentDidMount() {}
+  generation = 0;
 
-  onConfigChange = (event: ChangeEvent) => {
-    const { onChange, query } = this.props;
-    onChange({ ...query });
-  };
+  onComponentDidMount() {}
 
   onChange(query: any) {
     const { onChange, onRunQuery } = this.props;
+    // the model is modified immediately... this is react style
     onChange(query);
-    onRunQuery();
+
+    // debounce graph refresh
+    const gen = ++this.generation;
+    setTimeout(() => {
+      if (gen === this.generation) {
+        onRunQuery();
+      }
+    }, 500);
   }
 
   render() {
@@ -97,7 +102,6 @@ export class QueryEditor extends PureComponent<Props, State> {
               width="100%"
               mode="hjson"
               enableBasicAutocompletion={true}
-              debounceChangePeriod={500}
               theme="monokai"
               onChange={(text: string) => this.onChange({ ...query, body: text })}
             />

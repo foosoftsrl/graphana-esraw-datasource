@@ -63,6 +63,17 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       if (oldQuery) {
         filters.push(oldQuery);
       }
+      adhocFilters.forEach((adhocFilter: any) => {
+        const { key, value, operator } = adhocFilter;
+        console.log('key = ' + key + ' value = ' + value + ' operator = ' + operator);
+        // if we have no value, this is a "raw" filter. let's parse it and add it to the filter list
+        if (operator === 'query') {
+          const filter = hjson.parse(value);
+          filters.push(filter);
+        } else {
+          console.log('No support (yet) for key/value ad-hoc filters');
+        }
+      });
       bodyObject.query = {
         bool: {
           must: filters,
