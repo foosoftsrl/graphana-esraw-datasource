@@ -32,8 +32,8 @@ export class QueryEditor extends PureComponent<Props, State> {
   }
 
   render() {
-    const query = defaults(this.props.query, defaultQuery);
-    const { alias, index, path, x, y, body } = query;
+    const queryObj = defaults(this.props.query, defaultQuery);
+    const { alias, index, query, path, x, y, body } = queryObj;
 
     return (
       <div>
@@ -45,7 +45,7 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={index}
               placeholder="Immetere indice"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...query, index: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, index: event.target.value })}
             />
             <label className="gf-form-label query-keyword width-7">Alias</label>
             <input
@@ -53,7 +53,20 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input width-12"
               value={alias}
               placeholder="Alias...."
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...query, alias: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, alias: event.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="gf-form-inline">
+          <div className="gf-form gf-form--grow">
+            <label className="gf-form-label query-keyword width-7">Query</label>
+            <input
+              type="text"
+              className="gf-form-input"
+              value={query}
+              placeholder="Free query, such as... field1:value1 AND field2:value2"
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, query: event.target.value })}
             />
           </div>
         </div>
@@ -66,7 +79,7 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={path}
               placeholder="Path to array of key/value pairs"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...query, path: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, path: event.target.value })}
             />
           </div>
         </div>
@@ -78,7 +91,7 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={x}
               placeholder="Name of the field containing timestamps"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...query, x: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, x: event.target.value })}
             />
           </div>
         </div>
@@ -90,7 +103,7 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={y}
               placeholder="Name of the field containing value coord"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...query, y: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, y: event.target.value })}
             />
           </div>
         </div>
@@ -103,7 +116,7 @@ export class QueryEditor extends PureComponent<Props, State> {
               mode="hjson"
               enableBasicAutocompletion={true}
               theme="monokai"
-              onChange={(text: string) => this.onChange({ ...query, body: text })}
+              onChange={(text: string) => this.onChange({ ...queryObj, body: text })}
             />
           </div>
         </div>

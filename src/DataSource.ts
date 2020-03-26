@@ -12,7 +12,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   basicAuth?: string;
   withCredentials?: boolean;
 
-  constructor(instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>, private templateSrv: any, private backendSrv: any) {
+  constructor(
+    instanceSettings: DataSourceInstanceSettings<MyDataSourceOptions>,
+    private templateSrv: any,
+    private backendSrv: any,
+    variableSrv: any
+  ) {
     super(instanceSettings);
 
     // General data source settings
@@ -20,6 +25,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     this.url = instanceSettings.url;
     this.basicAuth = instanceSettings.basicAuth;
     this.withCredentials = instanceSettings.withCredentials;
+    (window as any).variableSrv = variableSrv;
   }
 
   query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
@@ -51,17 +57,30 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
     // Accumulate the targets into an ES msearch request body
     let reqContent = '';
-    targets.forEach(target => {
+    targets.forEach((target: MyQuery) => {
       reqContent += JSON.stringify({ index: target.index }) + '\n';
       // Interpolate body
       const bodyHjson = this.templateSrv.replace(target.body, {}, 'glob');
       // Parse hjson body to a javacript variable
       const bodyObject = hjson.parse(bodyHjson);
 
-      const filters = [rangeFilter];
+      const filters = [];
+      // First add the range filter
+      filters.push(rangeFilter);
+      // Then the query in the body, if present
       const oldQuery = bodyObject.query;
       if (oldQuery) {
         filters.push(oldQuery);
+      }
+      // Then the query specified in confuguration
+      if (target.query && target.query.trim().length !== 0) {
+        const query = {
+          query_string: {
+            analyze_wildcard: true,
+            query: target.query,
+          },
+        };
+        filters.push(query);
       }
       adhocFilters.forEach((adhocFilter: any) => {
         const { key, value, operator } = adhocFilter;

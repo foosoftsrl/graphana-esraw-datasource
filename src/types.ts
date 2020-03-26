@@ -3,6 +3,7 @@ import { DataQuery, DataSourceJsonData } from '@grafana/data';
 export interface MyQuery extends DataQuery {
   alias?: string;
   index?: string;
+  query: string;
   body?: string;
   path: string;
   x: string;
@@ -12,9 +13,10 @@ export interface MyQuery extends DataQuery {
 export const defaultQuery: Partial<MyQuery> = {
   index: '',
   body: '',
+  query: '',
   path: 'aggregations.range.value',
-  x: '',
-  y: '',
+  x: 'key',
+  y: 'count',
 };
 
 /**
