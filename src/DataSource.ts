@@ -89,6 +89,16 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         if (operator === 'query') {
           const filter = hjson.parse(value);
           filters.push(filter);
+        } else if (operator === 'query_string') {
+          if (value && value.trim().length) {
+            const query = {
+              query_string: {
+                analyze_wildcard: true,
+                query: value,
+              },
+            };
+            filters.push(query);
+          }
         } else {
           console.log('No support (yet) for key/value ad-hoc filters');
         }
