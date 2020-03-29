@@ -10,18 +10,22 @@
   },
   "author": "Foosoft Srl",
   "license": "Apache-2.0",
-  "dependencies" : {
+  "dependencies": {
     "react-ace": "^7.0.0"
   },
-
   "devDependencies": {
     "@grafana/data": "next",
+    "@grafana/runtime": "next",
     "@grafana/toolkit": "next",
     "@grafana/ui": "next",
-    "@grafana/runtime": "next",
+    "@types/enzyme": "^3.10.5",
+    "@types/enzyme-adapter-react-16": "^1.0.6",
     "@types/grafana": "github:CorpGlory/types-grafana",
-    "hjson": "latest",
     "@types/hjson": "latest",
-    "@types/lodash": "latest"
+    "@types/jest": "^25.1.4",
+    "@types/lodash": "latest",
+    "enzyme": "^3.11.0",
+    "enzyme-adapter-react-16": "^1.15.2",
+    "hjson": "latest"
   }
 }

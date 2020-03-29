@@ -5,6 +5,7 @@ export interface MyQuery extends DataQuery {
   index?: string;
   query: string;
   body?: string;
+  splitPath: string;
   path: string;
   x: string;
   y: string;
@@ -14,6 +15,7 @@ export const defaultQuery: Partial<MyQuery> = {
   index: '',
   body: '',
   query: '',
+  splitPath: '',
   path: 'aggregations.range.value',
   x: 'key',
   y: 'count',

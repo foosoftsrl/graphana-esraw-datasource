@@ -33,7 +33,7 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   render() {
     const queryObj = defaults(this.props.query, defaultQuery);
-    const { alias, index, query, path, x, y, body } = queryObj;
+    const { alias, index, query, splitPath, path, x, y, body } = queryObj;
 
     return (
       <div>
@@ -73,6 +73,19 @@ export class QueryEditor extends PureComponent<Props, State> {
 
         <div className="gf-form-inline">
           <div className="gf-form gf-form--grow">
+            <label className="gf-form-label query-keyword width-7">Split path</label>
+            <input
+              type="text"
+              className="gf-form-input"
+              value={splitPath}
+              placeholder="Path to array of different series"
+              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, splitPath: event.target.value })}
+            />
+          </div>
+        </div>
+
+        <div className="gf-form-inline">
+          <div className="gf-form gf-form--grow">
             <label className="gf-form-label query-keyword width-7">Data path</label>
             <input
               type="text"
@@ -83,6 +96,7 @@ export class QueryEditor extends PureComponent<Props, State> {
             />
           </div>
         </div>
+
         <div className="gf-form-inline">
           <div className="gf-form gf-form--grow">
             <label className="gf-form-label query-keyword width-7">Time field</label>

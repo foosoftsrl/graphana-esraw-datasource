@@ -118,7 +118,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       data: reqContent,
       method: 'POST',
     }).then((res: any) => {
-      return this.mapResponse(targets, res);
+      return this.mapResponse(options, targets, res);
     });
   }
 
@@ -129,41 +129,59 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
   }
 
   // Convert ES response to grafana DataSourceResponse
-  mapResponse(targets: MyQuery[], res: any) {
+  mapResponse(options: DataQueryRequest<MyQuery>, targets: MyQuery[], res: any) {
     const resultArray = [];
     for (let i = 0; i < targets.length; i++) {
       const target = targets[i];
       const targetResponse = res.data.responses[i];
-      const path = target.path;
-      if (!path) {
-        throw new Error('No path option');
-      }
-      console.log('Path', path);
-      const value = _.get(targetResponse, path);
-      if (!value) {
-        throw new Error('No data @path ' + path);
-      }
-      if (!Array.isArray(value)) {
-        throw new Error('Not an array @' + path);
-      }
-      // Get x/y keys
-      const xKey = target.x;
-      const yKey = target.y;
-      // Map the data points to a timeserie
-      if (value.length) {
-        if (!(xKey in value[0])) {
-          throw new Error("Can't find '" + xKey + "' property in response");
+      if (target.splitPath && target.splitPath.length) {
+        const { x, y, splitPath } = target;
+        const seriesList = _.get(targetResponse, splitPath);
+        if (!seriesList) {
+          throw new Error('No data @splitPath ' + splitPath);
         }
-        if (!(yKey in value[0])) {
-          throw new Error("Can't find '" + yKey + "' property in response");
+        if (!Array.isArray(seriesList)) {
+          throw new Error('Not an array @' + splitPath);
         }
+        seriesList.forEach(series => {
+          const targetData = {
+            target: (series as any)[x],
+            datapoints: [[_.get(series, y), options.range!.from.valueOf()]],
+          };
+          resultArray.push(targetData);
+        });
+      } else {
+        const path = target.path;
+        if (!path) {
+          throw new Error('No path option');
+        }
+        console.log('Path', path);
+        const value = _.get(targetResponse, path);
+        if (!value) {
+          throw new Error('No data @path ' + path);
+        }
+        if (!Array.isArray(value)) {
+          throw new Error('Not an array @' + path);
+        }
+        // Get x/y keys
+        const xKey = target.x;
+        const yKey = target.y;
+        // Map the data points to a timeserie
+        if (value.length) {
+          if (!(xKey in value[0])) {
+            throw new Error("Can't find '" + xKey + "' property in response");
+          }
+          if (!(yKey in value[0])) {
+            throw new Error("Can't find '" + yKey + "' property in response");
+          }
+        }
+        const dataPoints = value.map(v => [v[yKey], v[xKey]]);
+        const targetData = {
+          target: target.alias ? target.alias : 'value',
+          datapoints: dataPoints,
+        };
+        resultArray.push(targetData);
       }
-      const dataPoints = value.map(v => [v[yKey], v[xKey]]);
-      const targetData = {
-        target: target.alias ? target.alias : 'value',
-        datapoints: dataPoints,
-      };
-      resultArray.push(targetData);
     }
     return { data: resultArray };
   }
