@@ -21132,7 +21132,7 @@ dom.importCssString(exports.cssText, exports.cssClass);
  * Class containing the diff, match and patch methods.
  * @constructor
  */
-function diff_match_patch() {
+var diff_match_patch = function() {
 
   // Defaults.
   // Redefine these in your program to override the defaults.
@@ -21157,7 +21157,7 @@ function diff_match_patch() {
 
   // The number of bits in an int.
   this.Match_MaxBits = 32;
-}
+};
 
 
 //  DIFF FUNCTIONS
@@ -21172,9 +21172,18 @@ var DIFF_DELETE = -1;
 var DIFF_INSERT = 1;
 var DIFF_EQUAL = 0;
 
-/** @typedef {{0: number, 1: string}} */
-diff_match_patch.Diff;
-
+/**
+ * Class representing one diff tuple.
+ * ~Attempts to look like a two-element array (which is what this used to be).~
+ * Constructor returns an actual two-element array, to allow destructing @JackuB
+ * See https://github.com/JackuB/diff-match-patch/issues/14 for details
+ * @param {number} op Operation, one of: DIFF_DELETE, DIFF_INSERT, DIFF_EQUAL.
+ * @param {string} text Text to be deleted, inserted, or retained.
+ * @constructor
+ */
+diff_match_patch.Diff = function(op, text) {
+  return [op, text];
+};
 
 /**
  * Find the differences between two texts.  Simplifies the problem by stripping
@@ -21184,7 +21193,7 @@ diff_match_patch.Diff;
  * @param {boolean=} opt_checklines Optional speedup flag. If present and false,
  *     then don't run a line-level diff first to identify the changed areas.
  *     Defaults to true, which does a faster, slightly less optimal diff.
- * @param {number} opt_deadline Optional time when the diff should be complete
+ * @param {number=} opt_deadline Optional time when the diff should be complete
  *     by.  Used internally for recursive calls.  Users should set DiffTimeout
  *     instead.
  * @return {!Array.<!diff_match_patch.Diff>} Array of diff tuples.
@@ -21209,7 +21218,7 @@ diff_match_patch.prototype.diff_main = function(text1, text2, opt_checklines,
   // Check for equality (speedup).
   if (text1 == text2) {
     if (text1) {
-      return [[DIFF_EQUAL, text1]];
+      return [new diff_match_patch.Diff(DIFF_EQUAL, text1)];
     }
     return [];
   }
@@ -21236,10 +21245,10 @@ diff_match_patch.prototype.diff_main = function(text1, text2, opt_checklines,
 
   // Restore the prefix and suffix.
   if (commonprefix) {
-    diffs.unshift([DIFF_EQUAL, commonprefix]);
+    diffs.unshift(new diff_match_patch.Diff(DIFF_EQUAL, commonprefix));
   }
   if (commonsuffix) {
-    diffs.push([DIFF_EQUAL, commonsuffix]);
+    diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, commonsuffix));
   }
   this.diff_cleanupMerge(diffs);
   return diffs;
@@ -21264,12 +21273,12 @@ diff_match_patch.prototype.diff_compute_ = function(text1, text2, checklines,
 
   if (!text1) {
     // Just add some text (speedup).
-    return [[DIFF_INSERT, text2]];
+    return [new diff_match_patch.Diff(DIFF_INSERT, text2)];
   }
 
   if (!text2) {
     // Just delete some text (speedup).
-    return [[DIFF_DELETE, text1]];
+    return [new diff_match_patch.Diff(DIFF_DELETE, text1)];
   }
 
   var longtext = text1.length > text2.length ? text1 : text2;
@@ -21277,9 +21286,10 @@ diff_match_patch.prototype.diff_compute_ = function(text1, text2, checklines,
   var i = longtext.indexOf(shorttext);
   if (i != -1) {
     // Shorter text is inside the longer text (speedup).
-    diffs = [[DIFF_INSERT, longtext.substring(0, i)],
-             [DIFF_EQUAL, shorttext],
-             [DIFF_INSERT, longtext.substring(i + shorttext.length)]];
+    diffs = [new diff_match_patch.Diff(DIFF_INSERT, longtext.substring(0, i)),
+             new diff_match_patch.Diff(DIFF_EQUAL, shorttext),
+             new diff_match_patch.Diff(DIFF_INSERT,
+                 longtext.substring(i + shorttext.length))];
     // Swap insertions for deletions if diff is reversed.
     if (text1.length > text2.length) {
       diffs[0][0] = diffs[2][0] = DIFF_DELETE;
@@ -21290,7 +21300,8 @@ diff_match_patch.prototype.diff_compute_ = function(text1, text2, checklines,
   if (shorttext.length == 1) {
     // Single character string.
     // After the previous speedup, the character can't be an equality.
-    return [[DIFF_DELETE, text1], [DIFF_INSERT, text2]];
+    return [new diff_match_patch.Diff(DIFF_DELETE, text1),
+            new diff_match_patch.Diff(DIFF_INSERT, text2)];
   }
 
   // Check to see if the problem can be split in two.
@@ -21306,7 +21317,8 @@ diff_match_patch.prototype.diff_compute_ = function(text1, text2, checklines,
     var diffs_a = this.diff_main(text1_a, text2_a, checklines, deadline);
     var diffs_b = this.diff_main(text1_b, text2_b, checklines, deadline);
     // Merge the results.
-    return diffs_a.concat([[DIFF_EQUAL, mid_common]], diffs_b);
+    return diffs_a.concat([new diff_match_patch.Diff(DIFF_EQUAL, mid_common)],
+                          diffs_b);
   }
 
   if (checklines && text1.length > 100 && text2.length > 100) {
@@ -21343,7 +21355,7 @@ diff_match_patch.prototype.diff_lineMode_ = function(text1, text2, deadline) {
 
   // Rediff any replacement blocks, this time character-by-character.
   // Add a dummy entry at the end.
-  diffs.push([DIFF_EQUAL, '']);
+  diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, ''));
   var pointer = 0;
   var count_delete = 0;
   var count_insert = 0;
@@ -21366,11 +21378,12 @@ diff_match_patch.prototype.diff_lineMode_ = function(text1, text2, deadline) {
           diffs.splice(pointer - count_delete - count_insert,
                        count_delete + count_insert);
           pointer = pointer - count_delete - count_insert;
-          var a = this.diff_main(text_delete, text_insert, false, deadline);
-          for (var j = a.length - 1; j >= 0; j--) {
-            diffs.splice(pointer, 0, a[j]);
+          var subDiff =
+              this.diff_main(text_delete, text_insert, false, deadline);
+          for (var j = subDiff.length - 1; j >= 0; j--) {
+            diffs.splice(pointer, 0, subDiff[j]);
           }
-          pointer = pointer + a.length;
+          pointer = pointer + subDiff.length;
         }
         count_insert = 0;
         count_delete = 0;
@@ -21504,7 +21517,8 @@ diff_match_patch.prototype.diff_bisect_ = function(text1, text2, deadline) {
   }
   // Diff took too long and hit the deadline or
   // number of diffs equals number of characters, no commonality at all.
-  return [[DIFF_DELETE, text1], [DIFF_INSERT, text2]];
+  return [new diff_match_patch.Diff(DIFF_DELETE, text1),
+          new diff_match_patch.Diff(DIFF_INSERT, text2)];
 };
 
 
@@ -21576,21 +21590,29 @@ diff_match_patch.prototype.diff_linesToChars_ = function(text1, text2) {
         lineEnd = text.length - 1;
       }
       var line = text.substring(lineStart, lineEnd + 1);
-      lineStart = lineEnd + 1;
 
       if (lineHash.hasOwnProperty ? lineHash.hasOwnProperty(line) :
           (lineHash[line] !== undefined)) {
         chars += String.fromCharCode(lineHash[line]);
       } else {
+        if (lineArrayLength == maxLines) {
+          // Bail out at 65535 because
+          // String.fromCharCode(65536) == String.fromCharCode(0)
+          line = text.substring(lineStart);
+          lineEnd = text.length;
+        }
         chars += String.fromCharCode(lineArrayLength);
         lineHash[line] = lineArrayLength;
         lineArray[lineArrayLength++] = line;
       }
+      lineStart = lineEnd + 1;
     }
     return chars;
   }
-
+  // Allocate 2/3rds of the space for text1, the rest for text2.
+  var maxLines = 40000;
   var chars1 = diff_linesToCharsMunge_(text1);
+  maxLines = 65535;
   var chars2 = diff_linesToCharsMunge_(text2);
   return {chars1: chars1, chars2: chars2, lineArray: lineArray};
 };
@@ -21604,13 +21626,13 @@ diff_match_patch.prototype.diff_linesToChars_ = function(text1, text2) {
  * @private
  */
 diff_match_patch.prototype.diff_charsToLines_ = function(diffs, lineArray) {
-  for (var x = 0; x < diffs.length; x++) {
-    var chars = diffs[x][1];
+  for (var i = 0; i < diffs.length; i++) {
+    var chars = diffs[i][1];
     var text = [];
-    for (var y = 0; y < chars.length; y++) {
-      text[y] = lineArray[chars.charCodeAt(y)];
+    for (var j = 0; j < chars.length; j++) {
+      text[j] = lineArray[chars.charCodeAt(j)];
     }
-    diffs[x][1] = text.join('');
+    diffs[i][1] = text.join('');
   }
 };
 
@@ -21628,7 +21650,7 @@ diff_match_patch.prototype.diff_commonPrefix = function(text1, text2) {
     return 0;
   }
   // Binary search.
-  // Performance analysis: http://neil.fraser.name/news/2007/10/09/
+  // Performance analysis: https://neil.fraser.name/news/2007/10/09/
   var pointermin = 0;
   var pointermax = Math.min(text1.length, text2.length);
   var pointermid = pointermax;
@@ -21660,7 +21682,7 @@ diff_match_patch.prototype.diff_commonSuffix = function(text1, text2) {
     return 0;
   }
   // Binary search.
-  // Performance analysis: http://neil.fraser.name/news/2007/10/09/
+  // Performance analysis: https://neil.fraser.name/news/2007/10/09/
   var pointermin = 0;
   var pointermax = Math.min(text1.length, text2.length);
   var pointermid = pointermax;
@@ -21709,7 +21731,7 @@ diff_match_patch.prototype.diff_commonOverlap_ = function(text1, text2) {
 
   // Start by looking for a single character match
   // and increase length until no match is found.
-  // Performance analysis: http://neil.fraser.name/news/2010/11/04/
+  // Performance analysis: https://neil.fraser.name/news/2010/11/04/
   var best = 0;
   var length = 1;
   while (true) {
@@ -21836,7 +21858,7 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
   var equalities = [];  // Stack of indices where equalities are found.
   var equalitiesLength = 0;  // Keeping our own length var is faster in JS.
   /** @type {?string} */
-  var lastequality = null;
+  var lastEquality = null;
   // Always equal to diffs[equalities[equalitiesLength - 1]][1]
   var pointer = 0;  // Index of current position.
   // Number of characters that changed prior to the equality.
@@ -21852,7 +21874,7 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
       length_deletions1 = length_deletions2;
       length_insertions2 = 0;
       length_deletions2 = 0;
-      lastequality = diffs[pointer][1];
+      lastEquality = diffs[pointer][1];
     } else {  // An insertion or deletion.
       if (diffs[pointer][0] == DIFF_INSERT) {
         length_insertions2 += diffs[pointer][1].length;
@@ -21861,13 +21883,13 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
       }
       // Eliminate an equality that is smaller or equal to the edits on both
       // sides of it.
-      if (lastequality && (lastequality.length <=
+      if (lastEquality && (lastEquality.length <=
           Math.max(length_insertions1, length_deletions1)) &&
-          (lastequality.length <= Math.max(length_insertions2,
+          (lastEquality.length <= Math.max(length_insertions2,
                                            length_deletions2))) {
         // Duplicate record.
         diffs.splice(equalities[equalitiesLength - 1], 0,
-                     [DIFF_DELETE, lastequality]);
+                     new diff_match_patch.Diff(DIFF_DELETE, lastEquality));
         // Change second copy to insert.
         diffs[equalities[equalitiesLength - 1] + 1][0] = DIFF_INSERT;
         // Throw away the equality we just deleted.
@@ -21879,7 +21901,7 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
         length_deletions1 = 0;
         length_insertions2 = 0;
         length_deletions2 = 0;
-        lastequality = null;
+        lastEquality = null;
         changes = true;
       }
     }
@@ -21910,8 +21932,8 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
         if (overlap_length1 >= deletion.length / 2 ||
             overlap_length1 >= insertion.length / 2) {
           // Overlap found.  Insert an equality and trim the surrounding edits.
-          diffs.splice(pointer, 0,
-              [DIFF_EQUAL, insertion.substring(0, overlap_length1)]);
+          diffs.splice(pointer, 0, new diff_match_patch.Diff(DIFF_EQUAL,
+              insertion.substring(0, overlap_length1)));
           diffs[pointer - 1][1] =
               deletion.substring(0, deletion.length - overlap_length1);
           diffs[pointer + 1][1] = insertion.substring(overlap_length1);
@@ -21922,8 +21944,8 @@ diff_match_patch.prototype.diff_cleanupSemantic = function(diffs) {
             overlap_length2 >= insertion.length / 2) {
           // Reverse overlap found.
           // Insert an equality and swap and trim the surrounding edits.
-          diffs.splice(pointer, 0,
-              [DIFF_EQUAL, deletion.substring(0, overlap_length2)]);
+          diffs.splice(pointer, 0, new diff_match_patch.Diff(DIFF_EQUAL,
+              deletion.substring(0, overlap_length2)));
           diffs[pointer - 1][0] = DIFF_INSERT;
           diffs[pointer - 1][1] =
               insertion.substring(0, insertion.length - overlap_length2);
@@ -22081,7 +22103,7 @@ diff_match_patch.prototype.diff_cleanupEfficiency = function(diffs) {
   var equalities = [];  // Stack of indices where equalities are found.
   var equalitiesLength = 0;  // Keeping our own length var is faster in JS.
   /** @type {?string} */
-  var lastequality = null;
+  var lastEquality = null;
   // Always equal to diffs[equalities[equalitiesLength - 1]][1]
   var pointer = 0;  // Index of current position.
   // Is there an insertion operation before the last equality.
@@ -22100,11 +22122,11 @@ diff_match_patch.prototype.diff_cleanupEfficiency = function(diffs) {
         equalities[equalitiesLength++] = pointer;
         pre_ins = post_ins;
         pre_del = post_del;
-        lastequality = diffs[pointer][1];
+        lastEquality = diffs[pointer][1];
       } else {
         // Not a candidate, and can never become one.
         equalitiesLength = 0;
-        lastequality = null;
+        lastEquality = null;
       }
       post_ins = post_del = false;
     } else {  // An insertion or deletion.
@@ -22121,16 +22143,16 @@ diff_match_patch.prototype.diff_cleanupEfficiency = function(diffs) {
        * <ins>A</del>X<ins>C</ins><del>D</del>
        * <ins>A</ins><del>B</del>X<del>C</del>
        */
-      if (lastequality && ((pre_ins && pre_del && post_ins && post_del) ||
-                           ((lastequality.length < this.Diff_EditCost / 2) &&
+      if (lastEquality && ((pre_ins && pre_del && post_ins && post_del) ||
+                           ((lastEquality.length < this.Diff_EditCost / 2) &&
                             (pre_ins + pre_del + post_ins + post_del) == 3))) {
         // Duplicate record.
         diffs.splice(equalities[equalitiesLength - 1], 0,
-                     [DIFF_DELETE, lastequality]);
+                     new diff_match_patch.Diff(DIFF_DELETE, lastEquality));
         // Change second copy to insert.
         diffs[equalities[equalitiesLength - 1] + 1][0] = DIFF_INSERT;
         equalitiesLength--;  // Throw away the equality we just deleted;
-        lastequality = null;
+        lastEquality = null;
         if (pre_ins && pre_del) {
           // No changes made which could affect previous entry, keep going.
           post_ins = post_del = true;
@@ -22159,7 +22181,8 @@ diff_match_patch.prototype.diff_cleanupEfficiency = function(diffs) {
  * @param {!Array.<!diff_match_patch.Diff>} diffs Array of diff tuples.
  */
 diff_match_patch.prototype.diff_cleanupMerge = function(diffs) {
-  diffs.push([DIFF_EQUAL, '']);  // Add a dummy entry at the end.
+  // Add a dummy entry at the end.
+  diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, ''));
   var pointer = 0;
   var count_delete = 0;
   var count_insert = 0;
@@ -22191,8 +22214,8 @@ diff_match_patch.prototype.diff_cleanupMerge = function(diffs) {
                 diffs[pointer - count_delete - count_insert - 1][1] +=
                     text_insert.substring(0, commonlength);
               } else {
-                diffs.splice(0, 0, [DIFF_EQUAL,
-                                    text_insert.substring(0, commonlength)]);
+                diffs.splice(0, 0, new diff_match_patch.Diff(DIFF_EQUAL,
+                    text_insert.substring(0, commonlength)));
                 pointer++;
               }
               text_insert = text_insert.substring(commonlength);
@@ -22210,19 +22233,19 @@ diff_match_patch.prototype.diff_cleanupMerge = function(diffs) {
             }
           }
           // Delete the offending records and add the merged ones.
-          if (count_delete === 0) {
-            diffs.splice(pointer - count_insert,
-                count_delete + count_insert, [DIFF_INSERT, text_insert]);
-          } else if (count_insert === 0) {
-            diffs.splice(pointer - count_delete,
-                count_delete + count_insert, [DIFF_DELETE, text_delete]);
-          } else {
-            diffs.splice(pointer - count_delete - count_insert,
-                count_delete + count_insert, [DIFF_DELETE, text_delete],
-                [DIFF_INSERT, text_insert]);
+          pointer -= count_delete + count_insert;
+          diffs.splice(pointer, count_delete + count_insert);
+          if (text_delete.length) {
+            diffs.splice(pointer, 0,
+                new diff_match_patch.Diff(DIFF_DELETE, text_delete));
+            pointer++;
           }
-          pointer = pointer - count_delete - count_insert +
-                    (count_delete ? 1 : 0) + (count_insert ? 1 : 0) + 1;
+          if (text_insert.length) {
+            diffs.splice(pointer, 0,
+                new diff_match_patch.Diff(DIFF_INSERT, text_insert));
+            pointer++;
+          }
+          pointer++;
         } else if (pointer !== 0 && diffs[pointer - 1][0] == DIFF_EQUAL) {
           // Merge this equality with the previous one.
           diffs[pointer - 1][1] += diffs[pointer][1];
@@ -22460,7 +22483,8 @@ diff_match_patch.prototype.diff_fromDelta = function(text1, delta) {
     switch (tokens[x].charAt(0)) {
       case '+':
         try {
-          diffs[diffsLength++] = [DIFF_INSERT, decodeURI(param)];
+          diffs[diffsLength++] =
+              new diff_match_patch.Diff(DIFF_INSERT, decodeURI(param));
         } catch (ex) {
           // Malformed URI sequence.
           throw new Error('Illegal escape in diff_fromDelta: ' + param);
@@ -22475,9 +22499,9 @@ diff_match_patch.prototype.diff_fromDelta = function(text1, delta) {
         }
         var text = text1.substring(pointer, pointer += n);
         if (tokens[x].charAt(0) == '=') {
-          diffs[diffsLength++] = [DIFF_EQUAL, text];
+          diffs[diffsLength++] = new diff_match_patch.Diff(DIFF_EQUAL, text);
         } else {
-          diffs[diffsLength++] = [DIFF_DELETE, text];
+          diffs[diffsLength++] = new diff_match_patch.Diff(DIFF_DELETE, text);
         }
         break;
       default:
@@ -22680,6 +22704,9 @@ diff_match_patch.prototype.patch_addContext_ = function(patch, text) {
   if (text.length == 0) {
     return;
   }
+  if (patch.start2 === null) {
+    throw Error('patch not initialized');
+  }
   var pattern = text.substring(patch.start2, patch.start2 + patch.length1);
   var padding = 0;
 
@@ -22698,13 +22725,13 @@ diff_match_patch.prototype.patch_addContext_ = function(patch, text) {
   // Add the prefix.
   var prefix = text.substring(patch.start2 - padding, patch.start2);
   if (prefix) {
-    patch.diffs.unshift([DIFF_EQUAL, prefix]);
+    patch.diffs.unshift(new diff_match_patch.Diff(DIFF_EQUAL, prefix));
   }
   // Add the suffix.
   var suffix = text.substring(patch.start2 + patch.length1,
                               patch.start2 + patch.length1 + padding);
   if (suffix) {
-    patch.diffs.push([DIFF_EQUAL, suffix]);
+    patch.diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, suffix));
   }
 
   // Roll back the start points.
@@ -22732,9 +22759,9 @@ diff_match_patch.prototype.patch_addContext_ = function(patch, text) {
  *
  * @param {string|!Array.<!diff_match_patch.Diff>} a text1 (methods 1,3,4) or
  * Array of diff tuples for text1 to text2 (method 2).
- * @param {string|!Array.<!diff_match_patch.Diff>} opt_b text2 (methods 1,4) or
+ * @param {string|!Array.<!diff_match_patch.Diff>=} opt_b text2 (methods 1,4) or
  * Array of diff tuples for text1 to text2 (method 3) or undefined (method 2).
- * @param {string|!Array.<!diff_match_patch.Diff>} opt_c Array of diff tuples
+ * @param {string|!Array.<!diff_match_patch.Diff>=} opt_c Array of diff tuples
  * for text1 to text2 (method 4) or undefined (methods 1,2,3).
  * @return {!Array.<!diff_match_patch.patch_obj>} Array of Patch objects.
  */
@@ -22823,7 +22850,7 @@ diff_match_patch.prototype.patch_make = function(a, opt_b, opt_c) {
             patch = new diff_match_patch.patch_obj();
             patchDiffLength = 0;
             // Unlike Unidiff, our patch lists have a rolling context.
-            // http://code.google.com/p/google-diff-match-patch/wiki/Unidiff
+            // https://github.com/google/diff-match-patch/wiki/Unidiff
             // Update prepatch text & pos to reflect the application of the
             // just completed patch.
             prepatch_text = postpatch_text;
@@ -22864,7 +22891,8 @@ diff_match_patch.prototype.patch_deepCopy = function(patches) {
     var patchCopy = new diff_match_patch.patch_obj();
     patchCopy.diffs = [];
     for (var y = 0; y < patch.diffs.length; y++) {
-      patchCopy.diffs[y] = patch.diffs[y].slice();
+      patchCopy.diffs[y] =
+          new diff_match_patch.Diff(patch.diffs[y][0], patch.diffs[y][1]);
     }
     patchCopy.start1 = patch.start1;
     patchCopy.start2 = patch.start2;
@@ -23008,7 +23036,7 @@ diff_match_patch.prototype.patch_addPadding = function(patches) {
   var diffs = patch.diffs;
   if (diffs.length == 0 || diffs[0][0] != DIFF_EQUAL) {
     // Add nullPadding equality.
-    diffs.unshift([DIFF_EQUAL, nullPadding]);
+    diffs.unshift(new diff_match_patch.Diff(DIFF_EQUAL, nullPadding));
     patch.start1 -= paddingLength;  // Should be 0.
     patch.start2 -= paddingLength;  // Should be 0.
     patch.length1 += paddingLength;
@@ -23028,7 +23056,7 @@ diff_match_patch.prototype.patch_addPadding = function(patches) {
   diffs = patch.diffs;
   if (diffs.length == 0 || diffs[diffs.length - 1][0] != DIFF_EQUAL) {
     // Add nullPadding equality.
-    diffs.push([DIFF_EQUAL, nullPadding]);
+    diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, nullPadding));
     patch.length1 += paddingLength;
     patch.length2 += paddingLength;
   } else if (paddingLength > diffs[diffs.length - 1][1].length) {
@@ -23069,7 +23097,7 @@ diff_match_patch.prototype.patch_splitMax = function(patches) {
       patch.start2 = start2 - precontext.length;
       if (precontext !== '') {
         patch.length1 = patch.length2 = precontext.length;
-        patch.diffs.push([DIFF_EQUAL, precontext]);
+        patch.diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, precontext));
       }
       while (bigpatch.diffs.length !== 0 &&
              patch.length1 < patch_size - this.Patch_Margin) {
@@ -23088,7 +23116,7 @@ diff_match_patch.prototype.patch_splitMax = function(patches) {
           patch.length1 += diff_text.length;
           start1 += diff_text.length;
           empty = false;
-          patch.diffs.push([diff_type, diff_text]);
+          patch.diffs.push(new diff_match_patch.Diff(diff_type, diff_text));
           bigpatch.diffs.shift();
         } else {
           // Deletion or equality.  Only take as much as we can stomach.
@@ -23102,7 +23130,7 @@ diff_match_patch.prototype.patch_splitMax = function(patches) {
           } else {
             empty = false;
           }
-          patch.diffs.push([diff_type, diff_text]);
+          patch.diffs.push(new diff_match_patch.Diff(diff_type, diff_text));
           if (diff_text == bigpatch.diffs[0][1]) {
             bigpatch.diffs.shift();
           } else {
@@ -23125,7 +23153,7 @@ diff_match_patch.prototype.patch_splitMax = function(patches) {
             patch.diffs[patch.diffs.length - 1][0] === DIFF_EQUAL) {
           patch.diffs[patch.diffs.length - 1][1] += postcontext;
         } else {
-          patch.diffs.push([DIFF_EQUAL, postcontext]);
+          patch.diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, postcontext));
         }
       }
       if (!empty) {
@@ -23204,13 +23232,13 @@ diff_match_patch.prototype.patch_fromText = function(textline) {
       }
       if (sign == '-') {
         // Deletion.
-        patch.diffs.push([DIFF_DELETE, line]);
+        patch.diffs.push(new diff_match_patch.Diff(DIFF_DELETE, line));
       } else if (sign == '+') {
         // Insertion.
-        patch.diffs.push([DIFF_INSERT, line]);
+        patch.diffs.push(new diff_match_patch.Diff(DIFF_INSERT, line));
       } else if (sign == ' ') {
         // Minor equality.
-        patch.diffs.push([DIFF_EQUAL, line]);
+        patch.diffs.push(new diff_match_patch.Diff(DIFF_EQUAL, line));
       } else if (sign == '@') {
         // Start of next patch.
         break;
@@ -23246,9 +23274,9 @@ diff_match_patch.patch_obj = function() {
 
 
 /**
- * Emmulate GNU diff's format.
+ * Emulate GNU diff's format.
  * Header: @@ -382,8 +481,9 @@
- * Indicies are printed as 1-based, not 0-based.
+ * Indices are printed as 1-based, not 0-based.
  * @return {string} The GNU diff string.
  */
 diff_match_patch.patch_obj.prototype.toString = function() {
@@ -23305,7 +23333,7 @@ module.exports['DIFF_EQUAL'] = DIFF_EQUAL;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* Hjson http://hjson.org */
+/* Hjson https://hjson.github.io */
 
 
 var common=__webpack_require__(/*! ./hjson-common */ "../node_modules/hjson/lib/hjson-common.js");
@@ -23519,7 +23547,7 @@ module.exports={
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* Hjson http://hjson.org */
+/* Hjson https://hjson.github.io */
 
 
 var os=__webpack_require__(/*! os */ "../node_modules/os-browserify/browser.js"); // will be {} when used in a browser
@@ -23639,7 +23667,7 @@ module.exports = {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* Hjson http://hjson.org */
+/* Hjson https://hjson.github.io */
 
 
 function loadDsf(col, type) {
@@ -23778,7 +23806,7 @@ module.exports = {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* Hjson http://hjson.org */
+/* Hjson https://hjson.github.io */
 
 
 module.exports = function(source, opt) {
@@ -24245,7 +24273,7 @@ module.exports = function(source, opt) {
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/* Hjson http://hjson.org */
+/* Hjson https://hjson.github.io */
 
 
 module.exports = function(data, opt) {
@@ -24671,7 +24699,7 @@ module.exports="3.2.1";
 "use strict";
 /*!
  * Hjson v3.2.1
- * http://hjson.org
+ * https://hjson.github.io
  *
  * Copyright 2014-2017 Christian Zangl, MIT license
  * Details and documentation:
@@ -24784,7 +24812,7 @@ module.exports="3.2.1";
     Hjson.dsf
 
       Domain specific formats are extensions to the Hjson syntax (see
-      hjson.org). These formats will be parsed and made available to
+      hjson.github.io). These formats will be parsed and made available to
       the application in place of strings (e.g. enable math to allow
       NaN values).
 
@@ -31488,7 +31516,7 @@ exports.default = SplitComponent;
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-/** @license React v16.12.0
+/** @license React v16.13.1
  * react-is.development.js
  *
  * Copyright (c) Facebook, Inc. and its affiliates.
@@ -31504,8 +31532,6 @@ exports.default = SplitComponent;
 if (true) {
   (function() {
 'use strict';
-
-Object.defineProperty(exports, '__esModule', { value: true });
 
 // The Symbol used to tag the ReactElement-like types. If there is no native Symbol
 // nor polyfill, then a plain number is used for performance.
@@ -31526,69 +31552,15 @@ var REACT_SUSPENSE_TYPE = hasSymbol ? Symbol.for('react.suspense') : 0xead1;
 var REACT_SUSPENSE_LIST_TYPE = hasSymbol ? Symbol.for('react.suspense_list') : 0xead8;
 var REACT_MEMO_TYPE = hasSymbol ? Symbol.for('react.memo') : 0xead3;
 var REACT_LAZY_TYPE = hasSymbol ? Symbol.for('react.lazy') : 0xead4;
+var REACT_BLOCK_TYPE = hasSymbol ? Symbol.for('react.block') : 0xead9;
 var REACT_FUNDAMENTAL_TYPE = hasSymbol ? Symbol.for('react.fundamental') : 0xead5;
 var REACT_RESPONDER_TYPE = hasSymbol ? Symbol.for('react.responder') : 0xead6;
 var REACT_SCOPE_TYPE = hasSymbol ? Symbol.for('react.scope') : 0xead7;
 
 function isValidElementType(type) {
   return typeof type === 'string' || typeof type === 'function' || // Note: its typeof might be other than 'symbol' or 'number' if it's a polyfill.
-  type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || type === REACT_SUSPENSE_LIST_TYPE || typeof type === 'object' && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE || type.$$typeof === REACT_FUNDAMENTAL_TYPE || type.$$typeof === REACT_RESPONDER_TYPE || type.$$typeof === REACT_SCOPE_TYPE);
+  type === REACT_FRAGMENT_TYPE || type === REACT_CONCURRENT_MODE_TYPE || type === REACT_PROFILER_TYPE || type === REACT_STRICT_MODE_TYPE || type === REACT_SUSPENSE_TYPE || type === REACT_SUSPENSE_LIST_TYPE || typeof type === 'object' && type !== null && (type.$$typeof === REACT_LAZY_TYPE || type.$$typeof === REACT_MEMO_TYPE || type.$$typeof === REACT_PROVIDER_TYPE || type.$$typeof === REACT_CONTEXT_TYPE || type.$$typeof === REACT_FORWARD_REF_TYPE || type.$$typeof === REACT_FUNDAMENTAL_TYPE || type.$$typeof === REACT_RESPONDER_TYPE || type.$$typeof === REACT_SCOPE_TYPE || type.$$typeof === REACT_BLOCK_TYPE);
 }
-
-/**
- * Forked from fbjs/warning:
- * https://github.com/facebook/fbjs/blob/e66ba20ad5be433eb54423f2b097d829324d9de6/packages/fbjs/src/__forks__/warning.js
- *
- * Only change is we use console.warn instead of console.error,
- * and do nothing when 'console' is not supported.
- * This really simplifies the code.
- * ---
- * Similar to invariant but only logs a warning if the condition is not met.
- * This can be used to log issues in development environments in critical
- * paths. Removing the logging code for production environments will keep the
- * same logic and follow the same code paths.
- */
-var lowPriorityWarningWithoutStack = function () {};
-
-{
-  var printWarning = function (format) {
-    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      args[_key - 1] = arguments[_key];
-    }
-
-    var argIndex = 0;
-    var message = 'Warning: ' + format.replace(/%s/g, function () {
-      return args[argIndex++];
-    });
-
-    if (typeof console !== 'undefined') {
-      console.warn(message);
-    }
-
-    try {
-      // --- Welcome to debugging React ---
-      // This error was thrown as a convenience so that you can use this stack
-      // to find the callsite that caused this warning to fire.
-      throw new Error(message);
-    } catch (x) {}
-  };
-
-  lowPriorityWarningWithoutStack = function (condition, format) {
-    if (format === undefined) {
-      throw new Error('`lowPriorityWarningWithoutStack(condition, format, ...args)` requires a warning ' + 'message argument');
-    }
-
-    if (!condition) {
-      for (var _len2 = arguments.length, args = new Array(_len2 > 2 ? _len2 - 2 : 0), _key2 = 2; _key2 < _len2; _key2++) {
-        args[_key2 - 2] = arguments[_key2];
-      }
-
-      printWarning.apply(void 0, [format].concat(args));
-    }
-  };
-}
-
-var lowPriorityWarningWithoutStack$1 = lowPriorityWarningWithoutStack;
 
 function typeOf(object) {
   if (typeof object === 'object' && object !== null) {
@@ -31650,8 +31622,9 @@ var hasWarnedAboutDeprecatedIsAsyncMode = false; // AsyncMode should be deprecat
 function isAsyncMode(object) {
   {
     if (!hasWarnedAboutDeprecatedIsAsyncMode) {
-      hasWarnedAboutDeprecatedIsAsyncMode = true;
-      lowPriorityWarningWithoutStack$1(false, 'The ReactIs.isAsyncMode() alias has been deprecated, ' + 'and will be removed in React 17+. Update your code to use ' + 'ReactIs.isConcurrentMode() instead. It has the exact same API.');
+      hasWarnedAboutDeprecatedIsAsyncMode = true; // Using console['warn'] to evade Babel and ESLint
+
+      console['warn']('The ReactIs.isAsyncMode() alias has been deprecated, ' + 'and will be removed in React 17+. Update your code to use ' + 'ReactIs.isConcurrentMode() instead. It has the exact same API.');
     }
   }
 
@@ -31694,7 +31667,6 @@ function isSuspense(object) {
   return typeOf(object) === REACT_SUSPENSE_TYPE;
 }
 
-exports.typeOf = typeOf;
 exports.AsyncMode = AsyncMode;
 exports.ConcurrentMode = ConcurrentMode;
 exports.ContextConsumer = ContextConsumer;
@@ -31708,7 +31680,6 @@ exports.Portal = Portal;
 exports.Profiler = Profiler;
 exports.StrictMode = StrictMode;
 exports.Suspense = Suspense;
-exports.isValidElementType = isValidElementType;
 exports.isAsyncMode = isAsyncMode;
 exports.isConcurrentMode = isConcurrentMode;
 exports.isContextConsumer = isContextConsumer;
@@ -31722,6 +31693,8 @@ exports.isPortal = isPortal;
 exports.isProfiler = isProfiler;
 exports.isStrictMode = isStrictMode;
 exports.isSuspense = isSuspense;
+exports.isValidElementType = isValidElementType;
+exports.typeOf = typeOf;
   })();
 }
 
@@ -31749,7 +31722,7 @@ if (false) {} else {
 /*!******************************************!*\
   !*** ../node_modules/tslib/tslib.es6.js ***!
   \******************************************/
-/*! exports provided: __extends, __assign, __rest, __decorate, __param, __metadata, __awaiter, __generator, __exportStar, __values, __read, __spread, __spreadArrays, __await, __asyncGenerator, __asyncDelegator, __asyncValues, __makeTemplateObject, __importStar, __importDefault */
+/*! exports provided: __extends, __assign, __rest, __decorate, __param, __metadata, __awaiter, __generator, __createBinding, __exportStar, __values, __read, __spread, __spreadArrays, __await, __asyncGenerator, __asyncDelegator, __asyncValues, __makeTemplateObject, __importStar, __importDefault, __classPrivateFieldGet, __classPrivateFieldSet */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -31762,6 +31735,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__metadata", function() { return __metadata; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__awaiter", function() { return __awaiter; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__generator", function() { return __generator; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__createBinding", function() { return __createBinding; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__exportStar", function() { return __exportStar; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__values", function() { return __values; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__read", function() { return __read; });
@@ -31774,19 +31748,21 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__makeTemplateObject", function() { return __makeTemplateObject; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__importStar", function() { return __importStar; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__importDefault", function() { return __importDefault; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__classPrivateFieldGet", function() { return __classPrivateFieldGet; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "__classPrivateFieldSet", function() { return __classPrivateFieldSet; });
 /*! *****************************************************************************
-Copyright (c) Microsoft Corporation. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-this file except in compliance with the License. You may obtain a copy of the
-License at http://www.apache.org/licenses/LICENSE-2.0
+Copyright (c) Microsoft Corporation.
 
-THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
-WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
-MERCHANTABLITY OR NON-INFRINGEMENT.
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
 
-See the Apache Version 2.0 License for specific language governing permissions
-and limitations under the License.
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
 ***************************************************************************** */
 /* global Reflect, Promise */
 
@@ -31842,10 +31818,11 @@ function __metadata(metadataKey, metadataValue) {
 }
 
 function __awaiter(thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 }
@@ -31878,19 +31855,25 @@ function __generator(thisArg, body) {
     }
 }
 
+function __createBinding(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}
+
 function __exportStar(m, exports) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 
 function __values(o) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator], i = 0;
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
     if (m) return m.call(o);
-    return {
+    if (o && typeof o.length === "number") return {
         next: function () {
             if (o && i >= o.length) o = void 0;
             return { value: o && o[i++], done: !o };
         }
     };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 }
 
 function __read(o, n) {
@@ -31969,6 +31952,21 @@ function __importStar(mod) {
 
 function __importDefault(mod) {
     return (mod && mod.__esModule) ? mod : { default: mod };
+}
+
+function __classPrivateFieldGet(receiver, privateMap) {
+    if (!privateMap.has(receiver)) {
+        throw new TypeError("attempted to get private field on non-instance");
+    }
+    return privateMap.get(receiver);
+}
+
+function __classPrivateFieldSet(receiver, privateMap, value) {
+    if (!privateMap.has(receiver)) {
+        throw new TypeError("attempted to set private field on non-instance");
+    }
+    privateMap.set(receiver, value);
+    return value;
 }
 
 
@@ -32189,18 +32187,24 @@ function (_super) {
       });
     } // Prepare a range filter on timestamp field
 
+    /*
+    const { range } = options;
+    const from = range!.from.valueOf();
+    const to = range!.to.valueOf();
+    */
 
-    var range = options.range;
-    var from = range.from.valueOf();
-    var to = range.to.valueOf();
-    var rangeFilter = {
+    /*
+    const rangeFilter = {
       range: {
         '@timestamp': {
           gte: from,
-          lte: to
-        }
-      }
-    }; // Ad hoc filters will be inserted as-is in the query
+          lte: to,
+        },
+      },
+    };
+    */
+    // Ad hoc filters will be inserted as-is in the query
+
 
     var adhocFilters = this.templateSrv.getAdhocFilters(this.name);
     console.log('adhoc filters = ' + JSON.stringify(adhocFilters)); // Accumulate the targets into an ES msearch request body
@@ -32215,25 +32219,12 @@ function (_super) {
 
 
       var bodyObject = hjson__WEBPACK_IMPORTED_MODULE_3__["parse"](bodyHjson);
-      var filters = []; // First add the range filter
-
-      filters.push(rangeFilter); // Then the query in the body, if present
+      var filters = []; // Add the query in the body, if present
 
       var oldQuery = bodyObject.query;
 
       if (oldQuery) {
         filters.push(oldQuery);
-      } // Then the query specified in confuguration
-
-
-      if (target.query && target.query.trim().length !== 0) {
-        var query = {
-          query_string: {
-            analyze_wildcard: true,
-            query: target.query
-          }
-        };
-        filters.push(query);
       }
 
       adhocFilters.forEach(function (adhocFilter) {
@@ -32341,13 +32332,13 @@ function (_super) {
             throw new Error("Can't find '" + xKey_1 + "' property in response");
           }
 
-          if (!(yKey_1 in value[0])) {
+          if (!lodash__WEBPACK_IMPORTED_MODULE_1___default.a.has(value[0], yKey_1)) {
             throw new Error("Can't find '" + yKey_1 + "' property in response");
           }
         }
 
         var dataPoints = value.map(function (v) {
-          return [v[yKey_1], v[xKey_1]];
+          return [lodash__WEBPACK_IMPORTED_MODULE_1___default.a.get(v, yKey_1), lodash__WEBPACK_IMPORTED_MODULE_1___default.a.get(v, xKey_1)];
         });
         var targetData = {
           target: target.alias ? target.alias : 'value',
@@ -32461,7 +32452,6 @@ function (_super) {
     var queryObj = lodash_defaults__WEBPACK_IMPORTED_MODULE_1___default()(this.props.query, _types__WEBPACK_IMPORTED_MODULE_3__["defaultQuery"]);
     var alias = queryObj.alias,
         index = queryObj.index,
-        query = queryObj.query,
         splitPath = queryObj.splitPath,
         path = queryObj.path,
         x = queryObj.x,
@@ -32493,22 +32483,6 @@ function (_super) {
       onChange: function onChange(event) {
         return _this.onChange(Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])(Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({}, queryObj), {
           alias: event.target.value
-        }));
-      }
-    }))), react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("div", {
-      className: "gf-form-inline"
-    }, react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("div", {
-      className: "gf-form gf-form--grow"
-    }, react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("label", {
-      className: "gf-form-label query-keyword width-7"
-    }, "Query"), react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("input", {
-      type: "text",
-      className: "gf-form-input",
-      value: query,
-      placeholder: "Free query, such as... field1:value1 AND field2:value2",
-      onChange: function onChange(event) {
-        return _this.onChange(Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])(Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__assign"])({}, queryObj), {
-          query: event.target.value
         }));
       }
     }))), react__WEBPACK_IMPORTED_MODULE_2___default.a.createElement("div", {
@@ -32638,7 +32612,6 @@ __webpack_require__.r(__webpack_exports__);
 var defaultQuery = {
   index: '',
   body: '',
-  query: '',
   splitPath: '',
   path: 'aggregations.range.value',
   x: 'key',

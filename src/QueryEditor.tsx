@@ -33,7 +33,7 @@ export class QueryEditor extends PureComponent<Props, State> {
 
   render() {
     const queryObj = defaults(this.props.query, defaultQuery);
-    const { alias, index, query, splitPath, path, x, y, body } = queryObj;
+    const { alias, index, splitPath, path, x, y, body } = queryObj;
 
     return (
       <div>
@@ -45,7 +45,9 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={index}
               placeholder="Immetere indice"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, index: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                this.onChange({ ...queryObj, index: event.target.value })
+              }
             />
             <label className="gf-form-label query-keyword width-7">Alias</label>
             <input
@@ -53,24 +55,12 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input width-12"
               value={alias}
               placeholder="Alias...."
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, alias: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                this.onChange({ ...queryObj, alias: event.target.value })
+              }
             />
           </div>
         </div>
-
-        <div className="gf-form-inline">
-          <div className="gf-form gf-form--grow">
-            <label className="gf-form-label query-keyword width-7">Query</label>
-            <input
-              type="text"
-              className="gf-form-input"
-              value={query}
-              placeholder="Free query, such as... field1:value1 AND field2:value2"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, query: event.target.value })}
-            />
-          </div>
-        </div>
-
         <div className="gf-form-inline">
           <div className="gf-form gf-form--grow">
             <label className="gf-form-label query-keyword width-7">Split path</label>
@@ -79,7 +69,9 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={splitPath}
               placeholder="Path to array of different series"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, splitPath: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                this.onChange({ ...queryObj, splitPath: event.target.value })
+              }
             />
           </div>
         </div>
@@ -92,7 +84,9 @@ export class QueryEditor extends PureComponent<Props, State> {
               className="gf-form-input"
               value={path}
               placeholder="Path to array of key/value pairs"
-              onChange={(event: ChangeEvent<HTMLInputElement>) => this.onChange({ ...queryObj, path: event.target.value })}
+              onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                this.onChange({ ...queryObj, path: event.target.value })
+              }
             />
           </div>
         </div>

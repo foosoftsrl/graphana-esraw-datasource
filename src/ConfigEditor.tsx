@@ -1,7 +1,6 @@
 import React, { PureComponent, ChangeEvent } from 'react';
-import { DataSourcePluginOptionsEditorProps } from '@grafana/data';
+import { DataSourcePluginOptionsEditorProps, DataSourceJsonData } from '@grafana/data';
 import { DataSourceHttpSettings } from '@grafana/ui';
-import { DataSourceJsonData } from '@grafana/data';
 
 interface Props extends DataSourcePluginOptionsEditorProps<DataSourceJsonData> {}
 
@@ -39,7 +38,12 @@ export class ConfigEditor extends PureComponent<Props, State> {
     const { options, onOptionsChange } = this.props;
     return (
       <>
-        <DataSourceHttpSettings defaultUrl={'http://localhost:9200'} dataSourceConfig={options} showAccessOptions={true} onChange={onOptionsChange} />
+        <DataSourceHttpSettings
+          defaultUrl={'http://localhost:9200'}
+          dataSourceConfig={options}
+          showAccessOptions={true}
+          onChange={onOptionsChange}
+        />
       </>
     );
   }

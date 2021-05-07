@@ -30,7 +30,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
 
   query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     // Select only enabled targets
-    const targets = options.targets.filter(t => {
+    const targets = options.targets.filter((t) => {
       return !t.hide;
     });
 
@@ -39,9 +39,12 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     }
 
     // Prepare a range filter on timestamp field
+    /*
     const { range } = options;
     const from = range!.from.valueOf();
     const to = range!.to.valueOf();
+    */
+    /*
     const rangeFilter = {
       range: {
         '@timestamp': {
@@ -50,6 +53,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         },
       },
     };
+    */
 
     // Ad hoc filters will be inserted as-is in the query
     const adhocFilters = this.templateSrv.getAdhocFilters(this.name);
@@ -65,22 +69,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       const bodyObject = hjson.parse(bodyHjson);
 
       const filters = [];
-      // First add the range filter
-      filters.push(rangeFilter);
-      // Then the query in the body, if present
+      // Add the query in the body, if present
       const oldQuery = bodyObject.query;
       if (oldQuery) {
         filters.push(oldQuery);
-      }
-      // Then the query specified in confuguration
-      if (target.query && target.query.trim().length !== 0) {
-        const query = {
-          query_string: {
-            analyze_wildcard: true,
-            query: target.query,
-          },
-        };
-        filters.push(query);
       }
       adhocFilters.forEach((adhocFilter: any) => {
         const { key, value, operator } = adhocFilter;
@@ -143,7 +135,7 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         if (!Array.isArray(seriesList)) {
           throw new Error('Not an array @' + splitPath);
         }
-        seriesList.forEach(series => {
+        seriesList.forEach((series) => {
           const targetData = {
             target: (series as any)[x],
             datapoints: [[_.get(series, y), options.range!.from.valueOf()]],
@@ -171,11 +163,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           if (!(xKey in value[0])) {
             throw new Error("Can't find '" + xKey + "' property in response");
           }
-          if (!(yKey in value[0])) {
+          if (!_.has(value[0], yKey)) {
             throw new Error("Can't find '" + yKey + "' property in response");
           }
         }
-        const dataPoints = value.map(v => [v[yKey], v[xKey]]);
+        const dataPoints = value.map((v) => [_.get(v, yKey), _.get(v, xKey)]);
         const targetData = {
           target: target.alias ? target.alias : 'value',
           datapoints: dataPoints,
