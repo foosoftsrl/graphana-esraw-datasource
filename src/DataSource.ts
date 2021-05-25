@@ -132,16 +132,24 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
         if (!seriesList) {
           throw new Error('No data @splitPath ' + splitPath);
         }
-        if (!Array.isArray(seriesList)) {
-          throw new Error('Not an array @' + splitPath);
+        if (Array.isArray(seriesList)) {
+          seriesList.forEach((series) => {
+            const targetData = {
+              target: (series as any)[x],
+              datapoints: [[_.get(series, y), options.range!.from.valueOf()]],
+            };
+            resultArray.push(targetData);
+          });
+        } else {
+          // this is an object split, such as the one resulting from "filters" aggregation
+          for (const [k, v] of Object.entries(seriesList)) {
+            const targetData = {
+              target: k,
+              datapoints: [[_.get(v, y), options.range!.from.valueOf()]],
+            };
+            resultArray.push(targetData);
+          }
         }
-        seriesList.forEach((series) => {
-          const targetData = {
-            target: (series as any)[x],
-            datapoints: [[_.get(series, y), options.range!.from.valueOf()]],
-          };
-          resultArray.push(targetData);
-        });
       } else {
         const path = target.path;
         if (!path) {

@@ -32279,6 +32279,8 @@ function (_super) {
     var resultArray = [];
 
     var _loop_1 = function _loop_1(i) {
+      var e_1, _a;
+
       var target = targets[i];
       var targetResponse = res.data.responses[i];
 
@@ -32293,17 +32295,40 @@ function (_super) {
           throw new Error('No data @splitPath ' + splitPath);
         }
 
-        if (!Array.isArray(seriesList)) {
-          throw new Error('Not an array @' + splitPath);
-        }
+        if (Array.isArray(seriesList)) {
+          seriesList.forEach(function (series) {
+            var targetData = {
+              target: series[x_1],
+              datapoints: [[lodash__WEBPACK_IMPORTED_MODULE_1___default.a.get(series, y_1), options.range.from.valueOf()]]
+            };
+            resultArray.push(targetData);
+          });
+        } else {
+          try {
+            // this is an object split, such as the one resulting from "filters" aggregation
+            for (var _b = (e_1 = void 0, Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__values"])(Object.entries(seriesList))), _c = _b.next(); !_c.done; _c = _b.next()) {
+              var _d = Object(tslib__WEBPACK_IMPORTED_MODULE_0__["__read"])(_c.value, 2),
+                  k = _d[0],
+                  v = _d[1];
 
-        seriesList.forEach(function (series) {
-          var targetData = {
-            target: series[x_1],
-            datapoints: [[lodash__WEBPACK_IMPORTED_MODULE_1___default.a.get(series, y_1), options.range.from.valueOf()]]
-          };
-          resultArray.push(targetData);
-        });
+              var targetData = {
+                target: k,
+                datapoints: [[lodash__WEBPACK_IMPORTED_MODULE_1___default.a.get(v, y_1), options.range.from.valueOf()]]
+              };
+              resultArray.push(targetData);
+            }
+          } catch (e_1_1) {
+            e_1 = {
+              error: e_1_1
+            };
+          } finally {
+            try {
+              if (_c && !_c.done && (_a = _b["return"])) _a.call(_b);
+            } finally {
+              if (e_1) throw e_1.error;
+            }
+          }
+        }
       } else {
         var path = target.path;
 
